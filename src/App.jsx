@@ -40,7 +40,9 @@ function App() {
     async (inputQuery, page = 1, currentCategory) => {
       const apiKey =
         import.meta.env.VITE_GNEWS_API_KEY ?? import.meta.env.VITE_NEWS_API_KEY;
-      if (!apiKey) {
+      const isDev = import.meta.env.DEV;
+
+      if (isDev && !apiKey) {
         setError("Missing GNews API key. Please set VITE_GNEWS_API_KEY.");
         return;
       }
@@ -49,21 +51,29 @@ function App() {
         setError(null); // Clear any previous errors
         setLoading(true);
 
-        const url = new URL(GNEWS_BASE_URL);
+        const endpoint =
+          (!isDev && import.meta.env.VITE_GNEWS_PROXY_URL) ||
+          (isDev ? GNEWS_BASE_URL : "/api/gnews");
+
+        const params = new URLSearchParams();
         const selectedTopic = currentCategory ?? category;
         if (selectedTopic) {
-          url.searchParams.set("topic", selectedTopic);
+          params.set("topic", selectedTopic);
         }
-        url.searchParams.set("lang", DEFAULT_LANGUAGE);
-        url.searchParams.set("country", DEFAULT_COUNTRY);
-        url.searchParams.set("max", PAGE_SIZE.toString());
-        url.searchParams.set("page", page.toString());
+        params.set("lang", DEFAULT_LANGUAGE);
+        params.set("country", DEFAULT_COUNTRY);
+        params.set("max", PAGE_SIZE.toString());
+        params.set("page", page.toString());
         if (inputQuery) {
-          url.searchParams.set("q", inputQuery);
+          params.set("q", inputQuery);
         }
-        url.searchParams.set("apikey", apiKey);
+        if (isDev) {
+          params.set("apikey", apiKey);
+        }
 
-        const response = await fetch(url.toString());
+        const requestUrl = `${endpoint}?${params.toString()}`;
+
+        const response = await fetch(requestUrl);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
