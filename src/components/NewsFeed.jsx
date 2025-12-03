@@ -1,6 +1,6 @@
 import React from "react";
 import NewsArticle from "./NewsArticle";
-import { Box, Typography } from "@mui/material";
+import { Typography } from "@mui/material";
 import LoadingArticle from "./LoadingArticle";
 
 const NewsFeed = (props) => {
@@ -36,9 +36,9 @@ const NewsFeed = (props) => {
           key={JSON.stringify(article)}
           url={article.url}
           title={article.title}
-          image={article.urlToImage}
-          description={article.description}
-          author={article.author}
+          image={article.image || article.urlToImage}
+          description={article.description || article.content}
+          author={article.author || article.source?.name}
           puplishedAt={article.publishedAt}
         />
       ))}

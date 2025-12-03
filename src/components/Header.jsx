@@ -86,13 +86,15 @@ const Header = (props) => {
           News Feed App
         </Typography>
         <StyledSelect value={category} onChange={onCategoryChange}>
-          <StyledMenuItem value="general">General</StyledMenuItem>
+          <StyledMenuItem value="breaking-news">Breaking News</StyledMenuItem>
+          <StyledMenuItem value="world">World</StyledMenuItem>
+          <StyledMenuItem value="nation">Nation</StyledMenuItem>
           <StyledMenuItem value="business">Business</StyledMenuItem>
-          <StyledMenuItem value="entertainment">Entertainment</StyledMenuItem>
-          <StyledMenuItem value="health">Health</StyledMenuItem>
-          <StyledMenuItem value="science">Science</StyledMenuItem>
-          <StyledMenuItem value="sports">Sports</StyledMenuItem>
           <StyledMenuItem value="technology">Technology</StyledMenuItem>
+          <StyledMenuItem value="entertainment">Entertainment</StyledMenuItem>
+          <StyledMenuItem value="sports">Sports</StyledMenuItem>
+          <StyledMenuItem value="science">Science</StyledMenuItem>
+          <StyledMenuItem value="health">Health</StyledMenuItem>
         </StyledSelect>
         <Search>
           <SearchIconWrapper>

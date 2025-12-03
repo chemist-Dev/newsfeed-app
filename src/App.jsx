@@ -2,13 +2,16 @@ import * as React from "react";
 import Container from "@mui/material/Container";
 import Header from "./components/Header";
 import NewsFeed from "./components/NewsFeed";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { debounce } from "lodash";
 import Button from "@mui/material/Button";
 import { styled } from "@mui/material/styles";
 import Typography from "@mui/material/Typography";
 
 const PAGE_SIZE = 10; // Number of articles per page
+const GNEWS_BASE_URL = "https://gnews.io/api/v4/top-headlines";
+const DEFAULT_LANGUAGE = "en";
+const DEFAULT_COUNTRY = "us";
 
 const Footer = styled("div")(({ theme }) => ({
   padding: theme.spacing(2, 0),
@@ -28,49 +31,76 @@ const ErrorMessage = styled("div")(({ theme }) => ({
 
 function App() {
   const [articles, setArticles] = useState([]);
-  const [category, setCategory] = useState("general");
+  const [category, setCategory] = useState("breaking-news");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const debouncedFetchArticles = debounce((newQuery) => {
-    setLoading(true);
-    fetchArticles(newQuery, currentPage, category).then(() => {
-      setLoading(false);
-    });
-  }, 700);
-
-  const fetchArticles = async (inputQuery, page = 1, currentCategory) => {
-    try {
-      setError(null); // Clear any previous errors
-      setLoading(true);
-
-      const response = await fetch(
-        `https://newsapi.org/v2/top-headlines?category=${
-          currentCategory ?? category
-        }&pageSize=${PAGE_SIZE}&page=${page}&q=${inputQuery}&country=us&apiKey=${
-          import.meta.env.VITE_NEWS_API_KEY
-        }`
-      );
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+  const fetchArticles = useCallback(
+    async (inputQuery, page = 1, currentCategory) => {
+      const apiKey =
+        import.meta.env.VITE_GNEWS_API_KEY ?? import.meta.env.VITE_NEWS_API_KEY;
+      if (!apiKey) {
+        setError("Missing GNews API key. Please set VITE_GNEWS_API_KEY.");
+        return;
       }
 
-      const data = await response.json();
-      if (data.status === "error") {
-        throw new Error(data.message || "API Error occurred");
+      try {
+        setError(null); // Clear any previous errors
+        setLoading(true);
+
+        const url = new URL(GNEWS_BASE_URL);
+        const selectedTopic = currentCategory ?? category;
+        if (selectedTopic) {
+          url.searchParams.set("topic", selectedTopic);
+        }
+        url.searchParams.set("lang", DEFAULT_LANGUAGE);
+        url.searchParams.set("country", DEFAULT_COUNTRY);
+        url.searchParams.set("max", PAGE_SIZE.toString());
+        url.searchParams.set("page", page.toString());
+        if (inputQuery) {
+          url.searchParams.set("q", inputQuery);
+        }
+        url.searchParams.set("apikey", apiKey);
+
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!Array.isArray(data.articles)) {
+          throw new Error(
+            data.errors?.[0] || data.message || "API Error occurred"
+          );
+        }
+        setArticles(data.articles || []);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
       }
-      setArticles(data.articles || []);
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [category]
+  );
+
+  const debouncedFetchArticles = useMemo(
+    () =>
+      debounce((newQuery) => {
+        fetchArticles(newQuery, currentPage, category);
+      }, 700),
+    [fetchArticles, currentPage, category]
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedFetchArticles.cancel();
+    };
+  }, [debouncedFetchArticles]);
 
   useEffect(() => {
     fetchArticles("");
-  }, []);
+  }, [fetchArticles]);
 
   const handleQueryChange = (newQuery) => {
     debouncedFetchArticles(newQuery);
